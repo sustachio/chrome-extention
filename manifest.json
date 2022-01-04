@@ -4,7 +4,7 @@
 	"manifest_version": 2,
 	"content_scripts": [
 		{
-			"matches": ["<all_urls>"],
+			"matches": ["https://aisdblend.instructure.com/api/v1/courses/235368/files/14314909"],
 			"js": ["scripts/jquery.js","scripts/content.js"]
 		}
 	],
