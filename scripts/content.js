@@ -22,28 +22,36 @@ function clearPage(parent) {
 		console.log("page wiped");
 	}
 }
-// problem: i cant get the modules data outside of the getJSON
-function loadmodules(course_id) {
-	$.getJSON(
-		`/api/v1/courses/${course_id}/modules?include=items`,
-		function( modules_data ) {
-			console.log(modules_data)
-		}
-	)
-}
-
 
 function loadCourses(courses) {
-	console.log("Courses:")
-	console.log(courses)
+	var coursesHTML = []
+	console.log("Courses:");
+	console.log(courses);
+
+	//load a course (class)
 	for (let i = 0; i < courses.length; i++) {
-		//load a course (class)
-		course = $("body").append($("<h3></h3>").text(courses[i].name));
+		let course = $("<h3></h3>").text(courses[i].name)
+		coursesHTML.push(course);
+		
+		//load the modules for that class
 		$.getJSON(
-			"/api/v1/courses/${course_id}/modules?include=items",
-			loadmodules
+			`/api/v1/courses/${courses[i].id}/modules?include=items`,
+			function(data) {
+				loadmodules(data, coursesHTML, i)
+			}
 		)
 	}
+	console.log(coursesHTML)
+}
+
+function loadmodules(data, elements, elementsNum) {
+	list = $("<ul></ul>");
+	//console.log(elements[elementsNum])
+	for (let i = 0; i < data.length; i++) {
+		list.append($("<li></li>").text(data[i].name))
+	}
+	$("body").append(elements[elementsNum])
+	$("body").append(list)
 }
 
 function main() {
