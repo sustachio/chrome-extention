@@ -2,163 +2,114 @@ console.log("Chrome plus has loaded!");
 
 // pull html from a webpage as a string in (html)
 
-let paragraphs = $("p");
 chrome.runtime.onMessage.addListener(gotMessage);
-clearPage($("body"));
-main()
 
 function gotMessage(msg, sender, sendResponce) {
-	console.log(msg)
+  console.log(msg);
 
-	for (let i = 0; i < paragraphs.length; i++) {
-		paragraphs[i].innerHTML = msg.txt
-	}
+  for (let i = 0; i < paragraphs.length; i++) {
+    paragraphs[i].innerHTML = msg.txt;
+  }
 }
 
+function loadCourses() {
+  //using lodeded corses becasue some of the module fetches take longer to load than others and the modules may get mixed up
+  var loadedCourses = [];
 
-function clearPage(parent) {
-    parent.empty();
-	if (!(parent.firstChild)) {
-		console.log("page wiped");
-	}
+  $.getJSON("/api/v1/users/self/favorites/courses", function (courses) {
+    console.log(courses);
+    $.each(courses, function (i, course) {
+      var onCourse = i;
+      let courseTitle = $(`<h3>${course.name}</h3>`);
+      loadedCourses.push(courseTitle);
+
+      //load modules
+      $.getJSON(
+        `/api/v1/courses/${course.id}/modules?include=items`,
+        function (modules) {
+          list = $("<ul></ul>");
+
+          //load a module group
+          $.each(modules, function (i, module) {
+            var item = $(`<li class="module-group">${module.name}</li>`);
+
+            items = module.items;
+            itemsList = $("<ul></ul>");
+
+            //load the pages in the module
+            $.each(items, function (i, item) {
+              let htmlItem = $(`<li class="module-item">${item.title}</li>`);
+
+              //store the url to the page
+              htmlItem.data("url", item.url);
+              htmlItem.data("type", item.type)
+              itemsList.append(htmlItem);
+
+              //when you click on any module-item
+              htmlItem.click(function () {
+                var item = this
+                var url = $(item).data("url");
+
+                //load page content into #page
+                $.getJSON(
+                  url,
+                  function (page) {
+                    var pageHTML = '';
+
+                    //get content of page depending on what type it is
+                    let type = $(item).data("type")
+                    switch (type) {
+                      case "Assignment":
+                        pageHTML = page.description
+                      case 'Page':
+                        pageHTML = page.body
+                    }
+                    
+                    pageHTML += type
+                    console.log(pageHTML)
+                    console.log(page)
+
+                    console.log(pageHTML);
+                    $("#page").html(pageHTML);
+                  }
+                );
+              });
+            });
+            item.append(itemsList);
+            list.append(item);
+            courseTitle.append(list);
+            $("#courses").append(loadedCourses[onCourse]);
+          });
+        }
+      );
+    });
+  });
 }
 
-function loadCourses(courses) {
-	var coursesHTML = []
-	console.log("Courses:");
-	console.log(courses);
-
-	//load a course (class)
-	for (let i = 0; i < courses.length; i++) {
-		let course = $("<h3></h3>").text(courses[i].name)
-		coursesHTML.push(course);
-		
-		//load the modules for that class
-		$.getJSON(
-			`/api/v1/courses/${courses[i].id}/modules?include=items`,
-			function(data) {
-				loadmodules(data, coursesHTML, i)
-			}
-		)
-	}
-	console.log(coursesHTML)
+function loadPages() {
+  $(".module-item").click(function () {
+    var url = this.data("url");
+    console.log(url);
+  });
 }
 
-function loadmodules(data, elements, elementsNum) {
-	list = $("<ul></ul>");
-	//console.log(elements[elementsNum])
-	for (let i = 0; i < data.length; i++) {
-		list.append($("<li></li>").text(data[i].name))
-	}
-	$("body").append(elements[elementsNum])
-	$("body").append(list)
-}
+//load corses:
+var html = `
+	<div class="container">
+		<div id="courses"></div>
+		<div id="page"></div>
+	</div>`;
 
-function main() {
-	$.getJSON(
-		"/api/v1/users/self/favorites/courses",
-		loadCourses
-	)
-}
+$("body").empty();
+$("body").append(html);
+loadCourses();
+loadPages();
 
 /*
-// styles for the dropdown
-$("head").append("<style>.dropdown-content-chromev2 { display: none; position: absolute; width: 50%; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; background-color: white; color: black; } .dropdown-chromev2:hover .dropdown-content-chromev2 { display: block; } .drop-link-chromev2:hover .dropdown-content-chromev2 { display: block; }.dropdown-chromev2:hover .drop-link-chromev2 { color: #3e8e41; }</style>");
-
-var links = $("a");
-var html = "<h1>no</h1>";
-var loaded = [];
-
-
-// run for every link
-links.each(function() {
-
-	// the div that has everything (dropdown) + class for the link
-	$(this).wrap('<div class="dropdown-chromev2"></div>');
-	$(this).addClass("drop-link-chromev2");
-
-	// the dropdown content div
-	$(this).parent().append('<div class="dropdown-content-chromev2"></div>');
-
-	// hide the content
-	$(this).siblings().next().hide();
-});
-
-// Load + display link page content
-$(".dropdown-chromev2").hover(onHover, offHover)
-
-function onHover() {
-	// get the url that the link leds to
-	let href = $(this).children().first().attr("href");
-
-	// see if the link has already been loaded
-	if (!(loaded.some(x => x.url === href))) {
-		console.log("Fetching data...");
-		$.ajax({
-   			url: href,
-   			type: 'GET',
-   		success: function(data){
-			html = data;
-			console.log('Data success!');
-		}, 
-		error: function(xhr, status, error) {
-			var err = eval("(" + xhr.responseText + ")");
-			html = '<h1></h1><br><h3>Debug:</h3><br><small>' + err.Message + '</small>';
-			console.log("Data fetch failed: " + err.Message)
-		}
-	});
-		loaded.push({
-			url: href,
-			content: html
-		});
-	// if the link has been loaded
-	} else {
-		html = loaded.find(x => x.url === href).content;
-	}
-
-	console.log(href);
-	console.log($(this).children().first().attr("href"));
-	console.log(loaded);
-	// sets the dropdown's content to the page
-	$(this).children().last().html(html);
-	$(this).children().last().show();
-};
-
-function offHover() {
-	$(this).children().last().hide();
-};
-
-
-*/
-
-/*
-Starting html:
-
-<a href="123.org">Click Me!</a>
-
-
-
-Desired result:
-
-<div class="dropdown">
-	<a class="drop-link" href="123.org">Click Me!</a>
-	<div class="dropdown-content">
-		(content of 123.org)
-	</div>
-</div>
-
-
-css:
-
-.dropdown-content {
-	display: none;
-	position: absolute;
-	min-width: 50%;
-	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-	z-index: 1;
-}
-
-.dropdown:hover .dropdown-content {display: block;}
-.drop-link:hover .dropdown-content {display: block;}
-.dropdown:hover .drop-link {background-color: #3e8e41;}
-*/
+						//load a page
+						$.getJSON(
+							item.url,
+							function (body) {
+								itemsList.append(body.normalize())
+						})
+						*/

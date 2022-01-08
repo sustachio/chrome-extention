@@ -5,7 +5,8 @@
 	"content_scripts": [
 		{
 			"matches": ["https://aisdblend.instructure.com/api/v1/courses/235368/files/14314909"],
-			"js": ["scripts/jquery.js","scripts/content.js"]
+			"js": ["scripts/jquery.js","scripts/content.js"],
+			"css": [ "styles/main.css" ]
 		}
 	],
 	"background": {
