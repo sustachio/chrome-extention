@@ -23,6 +23,15 @@ function loadCourses() {
       let courseTitle = $(`<h3>${course.name}</h3>`);
       loadedCourses.push(courseTitle);
 
+
+
+      //do this
+      $.getJSON(`/api/v1/courses/${course.id}?include=course_image`, function (course) {
+        console.log(course.image_download_url)
+      })
+
+
+
       //load modules
       $.getJSON(
         `/api/v1/courses/${course.id}/modules?include=items`,
